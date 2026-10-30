@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VisioSpark Registration</title>
+<style>
+  :root { --bg:#f6f4fb; --card:#fff; --ink:#201a33; --muted:#6c6483; --accent:#6d28d9; --line:#e4dff0; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width: 620px; margin: 40px auto; padding: 0 16px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 28px 0 10px; }
+  p.sub { color: var(--muted); margin: 0 0 24px; }
+  form { display:grid; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:16px; }
+  input, select { padding:10px 12px; border:1px solid var(--line); border-radius:6px; font-size:1rem; }
+  button { padding:10px 16px; border:0; border-radius:6px; background:var(--accent); color:#fff; font-size:1rem; cursor:pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  ul { list-style:none; padding:0; margin:0; }
+  li { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; gap:12px; }
+  li small { color:var(--muted); }
+  .msg { color:var(--accent); min-height:1.2em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>VisioSpark</h1>
+  <p class="sub">Register for an event. Web: Nginx, API: Node.js, Data: PostgreSQL, running on Kubernetes.</p>
+  <form id="f">
+    <select id="event" required></select>
+    <input id="name" placeholder="Full name" required>
+    <input id="email" type="email" placeholder="Email" required>
+    <button>Register</button>
+    <div class="msg" id="msg"></div>
+  </form>
+  <h2>Registrations</h2>
+  <ul id="list"></ul>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+async function loadEvents() {
+  const evs = await (await fetch('/api/events')).json();
+  $('event').innerHTML = evs.map(e => `<option value="${e.id}">${e.name} (${e.event_date.slice(0,10)}, ${e.venue})</option>`).join('');
+}
+async function loadRegs() {
+  const regs = await (await fetch('/api/registrations')).json();
+  $('list').innerHTML = regs.length ? '' : '<li><small>No registrations yet. Be the first.</small></li>';
+  for (const r of regs) {
+    const li = document.createElement('li');
+    const a = document.createElement('span'); a.textContent = r.name + ' - ' + r.event;
+    const b = document.createElement('small'); b.textContent = r.email;
+    li.append(a, b); $('list').appendChild(li);
+  }
+}
+$('f').onsubmit = async e => {
+  e.preventDefault();
+  const res = await fetch('/api/registrations', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ event_id: +$('event').value, name: $('name').value, email: $('email').value }) });
+  $('msg').textContent = res.ok ? 'Registered.' : 'Could not register. Check the form and try again.';
+  if (res.ok) { $('name').value = ''; $('email').value = ''; loadRegs(); }
+};
+loadEvents().then(loadRegs);
+</script>
+</body>
+</html>
